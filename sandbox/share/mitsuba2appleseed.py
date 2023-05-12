@@ -47,7 +47,7 @@ def info(message):
 
 
 def progress(message):
-    print(message + "...")
+    print(f"{message}...")
 
 
 def warning(message):
@@ -116,7 +116,7 @@ def clear_private_params(params):
 
 
 def make_unique_name(prefix, entities):
-    names = set(entity.get_name() for entity in entities)
+    names = {entity.get_name() for entity in entities}
 
     if prefix not in names:
         return prefix
@@ -318,20 +318,18 @@ def fresnel_conductor_inverse_reparam(n, k):
 
 
 def convert_diffuse_bsdf(assembly, bsdf_name, element):
-    bsdf_params = {}
-
     reflectance = element.find("*[@name='reflectance']")
-    bsdf_params["reflectance"] = convert_colormap(assembly, bsdf_name, reflectance)
-
+    bsdf_params = {
+        "reflectance": convert_colormap(assembly, bsdf_name, reflectance)
+    }
     assembly.bsdfs().insert(asr.BSDF("lambertian_brdf", bsdf_name, bsdf_params))
 
 
 def convert_roughdiffuse_bsdf(assembly, bsdf_name, element):
-    bsdf_params = {}
-
     reflectance = element.find("*[@name='reflectance']")
-    bsdf_params["reflectance"] = convert_colormap(assembly, bsdf_name, reflectance)
-
+    bsdf_params = {
+        "reflectance": convert_colormap(assembly, bsdf_name, reflectance)
+    }
     bsdf_params["roughness"] = convert_alpha_to_roughness(element, 0.2)
 
     assembly.bsdfs().insert(asr.BSDF("orennayar_brdf", bsdf_name, bsdf_params))
@@ -421,13 +419,12 @@ def convert_roughconductor_bsdf(assembly, bsdf_name, element):
 
 
 def convert_dielectric_bsdf(assembly, bsdf_name, element, roughness=0.0):
-    bsdf_params = {}
+    bsdf_params = {
+        "ior": float(element.find("float[@name='intIOR']").attrib["value"]),
+        "mdf": "ggx",
+        "surface_transmittance": 1.0,
+    }
 
-    # todo: support textured IOR.
-    bsdf_params["ior"] = float(element.find("float[@name='intIOR']").attrib["value"])
-
-    bsdf_params["mdf"] = "ggx"
-    bsdf_params["surface_transmittance"] = 1.0
     bsdf_params["roughness"] = roughness
 
     specular_reflectance_element = element.find("*[@name='specularReflectance']")
@@ -450,11 +447,8 @@ def convert_area_emitter(assembly, emitter_name, element):
     if emitter_name is None:
         fatal("Area emitters must have a name")
 
-    edf_params = {}
-
     radiance = element.find("*[@name='radiance']")
-    edf_params["radiance"] = convert_colormap(assembly, emitter_name, radiance)
-
+    edf_params = {"radiance": convert_colormap(assembly, emitter_name, radiance)}
     assembly.edfs().insert(asr.EDF("diffuse_edf", emitter_name, edf_params))
 
 
@@ -684,7 +678,9 @@ def process_shape_material(scene, assembly, instance_name, element):
         # Hack: force light-emitting materials to be single-sided.
         set_private_param(material_params, "two_sided", False)
 
-        material_name = make_unique_name(instance_name + "_material", assembly.materials())
+        material_name = make_unique_name(
+            f"{instance_name}_material", assembly.materials()
+        )
         material = asr.Material("generic_material", material_name, material_params)
         assembly.materials().insert(material)
         material = assembly.materials().get_by_name(material_name)

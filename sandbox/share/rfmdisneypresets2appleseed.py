@@ -36,8 +36,24 @@ import sys
 # Constants.
 # -------------------------------------------------------------------------------------------------
 
-DISNEY_BRDF_KEYS = set(["anisotropic", "baseColorB", "baseColorG", "baseColorR", "clearcoat", "clearcoatGloss", "metallic", "roughness",
-                        "sheen", "sheenTint", "specular", "specularTint", "subsurface", "subsurfaceColorB", "subsurfaceColorG", "subsurfaceColorR"])
+DISNEY_BRDF_KEYS = {
+    "anisotropic",
+    "baseColorB",
+    "baseColorG",
+    "baseColorR",
+    "clearcoat",
+    "clearcoatGloss",
+    "metallic",
+    "roughness",
+    "sheen",
+    "sheenTint",
+    "specular",
+    "specularTint",
+    "subsurface",
+    "subsurfaceColorB",
+    "subsurfaceColorG",
+    "subsurfaceColorR",
+}
 
 
 # -------------------------------------------------------------------------------------------------

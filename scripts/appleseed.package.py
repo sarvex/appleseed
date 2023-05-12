@@ -91,7 +91,7 @@ def fatal(message):
 
 
 def exe(filepath):
-    return filepath + ".exe" if os.name == "nt" else filepath
+    return f"{filepath}.exe" if os.name == "nt" else filepath
 
 
 def safe_delete_file(path):
@@ -151,11 +151,7 @@ def make_writable(filepath):
 
 def merge_tree(src, dst, symlinks=False, ignore=None):
     names = os.listdir(src)
-    if ignore is not None:
-        ignored_names = ignore(src, names)
-    else:
-        ignored_names = set()
-
+    ignored_names = ignore(src, names) if ignore is not None else set()
     if not os.path.exists(dst):
         os.makedirs(dst)
 
@@ -183,10 +179,7 @@ def merge_tree(src, dst, symlinks=False, ignore=None):
     try:
         shutil.copystat(src, dst)
     except OSError as ex:
-        if WindowsError is not None and isinstance(ex, WindowsError):
-            # Copying file access times may fail on Windows.
-            pass
-        else:
+        if WindowsError is None or not isinstance(ex, WindowsError):
             errors.append((src, dst, str(ex)))
     if errors:
         raise Error(errors)
@@ -367,7 +360,7 @@ class PackageBuilder:
         for dirpath, dirnames, filenames in os.walk("appleseed/bin"):
             for filename in filenames:
                 ext = os.path.splitext(filename)[1]
-                if ext != ".py" and ext != ".conf":
+                if ext not in [".py", ".conf"]:
                     paths.append(os.path.join(dirpath, filename))
 
         # appleseed.python.
@@ -379,10 +372,11 @@ class PackageBuilder:
         # appleseedpython_shared_libs = [ "_appleseedpython.so", "_appleseedpython3.so" ]
         appleseedpython_shared_libs = ["_appleseedpython.so"]
         for dirpath, dirnames, filenames in os.walk("appleseed/lib"):
-            for appleseedpython_shared_lib in appleseedpython_shared_libs:
-                if appleseedpython_shared_lib in filenames:
-                    paths.append(os.path.join(dirpath, appleseedpython_shared_lib))
-
+            paths.extend(
+                os.path.join(dirpath, appleseedpython_shared_lib)
+                for appleseedpython_shared_lib in appleseedpython_shared_libs
+                if appleseedpython_shared_lib in filenames
+            )
         return paths
 
     #
@@ -561,7 +555,9 @@ class WindowsPackageBuilder(PackageBuilder):
         shutil.copy(os.path.join(self.settings.python_path, "README.txt"), "appleseed/python27")
 
     def __copy_qt_framework(self, framework_name):
-        src_filepath = os.path.join(self.settings.qt_runtime_path, "bin", framework_name + ".dll")
+        src_filepath = os.path.join(
+            self.settings.qt_runtime_path, "bin", f"{framework_name}.dll"
+        )
         dst_path = os.path.join("appleseed", "bin")
         shutil.copy(src_filepath, dst_path)
 
@@ -630,7 +626,7 @@ class MacPackageBuilder(PackageBuilder):
 
         # Python framework (TODO: currently hardcoded to /usr/local/opt/python@2/Frameworks/Python.framework/Versions/2.7/Python).
         framework_name = "Python"
-        framework_dir = framework_name + ".framework"
+        framework_dir = f"{framework_name}.framework"
         src_filepath = os.path.join("/usr/local/opt/python@2/Frameworks", framework_dir, "Versions", "2.7", framework_name)
         dest_path = os.path.join("appleseed", "lib", framework_dir, "Versions", "2.7")
         safe_make_directory(dest_path)
@@ -646,7 +642,7 @@ class MacPackageBuilder(PackageBuilder):
         shutil.copytree(os.path.join(self.settings.python_path, "share"), "appleseed/python27/share")
 
     def __copy_qt_framework(self, framework_name):
-        framework_dir = framework_name + ".framework"
+        framework_dir = f"{framework_name}.framework"
         src_filepath = os.path.join(self.settings.qt_runtime_path, "lib", framework_dir, "Versions", "5", framework_name)
         dest_path = os.path.join("appleseed", "lib", framework_dir, "Versions", "5")
         safe_make_directory(dest_path)
@@ -654,7 +650,7 @@ class MacPackageBuilder(PackageBuilder):
         make_writable(os.path.join(dest_path, framework_name))
 
     def __copy_qt_resources(self, framework_name):
-        framework_dir = framework_name + ".framework"
+        framework_dir = f"{framework_name}.framework"
         src_path = os.path.join(self.settings.qt_runtime_path, "lib", framework_dir, "Versions", "5", "Resources")
         dest_path = os.path.join("appleseed", "lib", framework_dir, "Resources")
         shutil.copytree(src_path, dest_path)
@@ -671,7 +667,7 @@ class MacPackageBuilder(PackageBuilder):
         for dirpath, dirnames, filenames in os.walk("appleseed/lib"):
             for filename in filenames:
                 ext = os.path.splitext(filename)[1]
-                if ext == ".dylib" or ext == ".so":
+                if ext in [".dylib", ".so"]:
                     lib_path = os.path.join(dirpath, filename)
                     self.__set_library_id(lib_path, filename)
 
@@ -684,7 +680,7 @@ class MacPackageBuilder(PackageBuilder):
         for dirpath, dirnames, filenames in os.walk("appleseed/lib"):
             for filename in filenames:
                 ext = os.path.splitext(filename)[1]
-                if ext == ".dylib" or ext == ".so":
+                if ext in [".dylib", ".so"]:
                     lib_path = os.path.join(dirpath, filename)
                     self.__change_library_paths_in_binary(lib_path)
                     self.__change_qt_framework_paths_in_binary(lib_path)
@@ -693,7 +689,7 @@ class MacPackageBuilder(PackageBuilder):
         for dirpath, dirnames, filenames in os.walk("appleseed/bin"):
             for filename in filenames:
                 ext = os.path.splitext(filename)[1]
-                if ext != ".py" and ext != ".conf":
+                if ext not in [".py", ".conf"]:
                     exe_path = os.path.join(dirpath, filename)
                     self.__change_library_paths_in_binary(exe_path)
                     self.__change_qt_framework_paths_in_binary(exe_path)
@@ -714,7 +710,7 @@ class MacPackageBuilder(PackageBuilder):
     # Can be used on executables and dynamic libraries.
     def __change_qt_framework_paths_in_binary(self, bin_path):
         for fwk_path in self.__get_qt_frameworks_for_file(bin_path):
-            fwk_name = re.search(r"(Qt.*)\.framework", fwk_path).group(1)
+            fwk_name = re.search(r"(Qt.*)\.framework", fwk_path)[1]
             self.__change_library_path(bin_path, fwk_path, "@executable_path/../lib/{0}.framework/Versions/5/{0}".format(fwk_name))
         self.__change_library_path(bin_path, "/usr/local/opt/python@2/Frameworks/Python.framework/Versions/2.7/Python",
                                    "@executable_path/../lib/Python.framework/Versions/2.7/Python")
@@ -750,7 +746,7 @@ class MacPackageBuilder(PackageBuilder):
 
         libs = set()
 
-        for line in out.split("\n")[1:]:    # skip the first line
+        for line in out.split("\n")[1:]:# skip the first line
             line = line.strip()
 
             # Ignore empty lines.
@@ -761,7 +757,7 @@ class MacPackageBuilder(PackageBuilder):
             m = re.match(r"(.*) \(compatibility version .*, current version .*\)", line)
             if not m:
                 fatal("Failed to parse line from otool(1) output: {0}".format(line))
-            lib = m.group(1)
+            lib = m[1]
 
             # Ignore self-references (why do these happen?).
             if lib == filename:
@@ -821,7 +817,7 @@ class MacPackageBuilder(PackageBuilder):
 
         libs = set()
 
-        for line in out.split("\n")[1:]:    # skip the first line
+        for line in out.split("\n")[1:]:# skip the first line
             line = line.strip()
 
             # Ignore empty lines.
@@ -832,7 +828,7 @@ class MacPackageBuilder(PackageBuilder):
             m = re.match(r"(.*) \(compatibility version .*, current version .*\)", line)
             if not m:
                 fatal("Failed to parse line from otool(1) output: {0}".format(line))
-            lib = m.group(1)
+            lib = m[1]
 
             if re.search(r"Qt.*\.framework", lib):
                 libs.add(lib)
@@ -840,10 +836,7 @@ class MacPackageBuilder(PackageBuilder):
         return libs
 
     def __is_system_lib(self, lib):
-        for prefix in self.SYSTEM_LIBS_PREFIXES:
-            if lib.startswith(prefix):
-                return True
-        return False
+        return any(lib.startswith(prefix) for prefix in self.SYSTEM_LIBS_PREFIXES)
 
 
 # -------------------------------------------------------------------------------------------------
@@ -973,10 +966,7 @@ class LinuxPackageBuilder(PackageBuilder):
         return filename.endswith(".so") or ".so." in filename
 
     def __is_system_lib(self, lib):
-        for prefix in self.SYSTEM_LIBS_PREFIXES:
-            if lib.startswith(prefix):
-                return True
-        return False
+        return any(lib.startswith(prefix) for prefix in self.SYSTEM_LIBS_PREFIXES)
 
     def __add_python_to_stage(self):
         progress("Linux-specific: Adding Python 2.7 to staging directory")

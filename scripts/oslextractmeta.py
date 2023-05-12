@@ -109,39 +109,31 @@ def isValidExtension(fp, filetypes):
 
 
 def createFileList(filetypes, osl_cfg, recursive=False, args=None, pathfile=None):
-    filelist = list()
+    filelist = []
     # files/dirs from external file
     if pathfile:
         for fp in pathfile:
             try:
-                fp = open(pathfile)
-                for line in fp:
-                    filelist.append(line)
-                fp.close()
+                with open(pathfile) as fp:
+                    filelist.extend(iter(fp))
             except:
-                _error("Could not read from file %s" % pathfile)
+                _error(f"Could not read from file {pathfile}")
     # files/dirs from command line arguments
     if args:
-        for arg in args:
-            filelist.append(arg)
+        filelist.extend(iter(args))
     # files/dirs from config file
     osl_dir = osl_cfg.get('settings', 'osldir')
     if len(osl_dir) > 0:
         osldir_list = osl_dir.split(',')
-        for arg in osldir_list:
-            filelist.append(arg)
-
-    # expand vars
-    args_expanded = list()
-    for arg in filelist:
-        args_expanded.append(os.path.expandvars(arg))
+        filelist.extend(iter(osldir_list))
+    args_expanded = [os.path.expandvars(arg) for arg in filelist]
     # clear filelist and glob
-    filelist = list()
+    filelist = []
     for arg in args_expanded:
-        filelist.extend([x for x in glob.iglob(arg)])
+        filelist.extend(list(glob.iglob(arg)))
 
     # split files from directories
-    dirlist = list()
+    dirlist = []
     dirlist = [x for x in filelist if os.path.isdir(x)]
     filelist[:] = [x for x in filelist if isValidFile(x, filetypes)]
 
@@ -164,7 +156,7 @@ def createFileList(filetypes, osl_cfg, recursive=False, args=None, pathfile=None
     filelist = list(set(filelist))
 
     # if there are no files/paths quit
-    if len(filelist) < 1:
+    if not filelist:
         _fatalError("No files or directories found, exiting.")
 
     return filelist
@@ -178,9 +170,9 @@ def parseOslInfo(compiledShader, osl_cfg):
 
     oslpath = osl_cfg.get('settings', 'oslpath')
     if os.path.isfile(oslpath):
-        cmd = str(oslpath) + ' -v %s' % compiledShader
+        cmd = f'{str(oslpath)} -v {compiledShader}'
     else:
-        cmd = 'oslinfo -v %s' % compiledShader
+        cmd = f'oslinfo -v {compiledShader}'
     cmd = cmd.split()
     try:
         fp = subprocess.check_output(cmd)
@@ -191,19 +183,19 @@ def parseOslInfo(compiledShader, osl_cfg):
     # if false skip shader and write error message to console
     lines = fp.splitlines()
     if not lines:
-        _error('Missing shader definition for %s' % compiledShader)
+        _error(f'Missing shader definition for {compiledShader}')
         return False
     count = 0
     shaderDef = lines[count]
     args = shaderDef.split()
 
     # tempShader stores all the data
-    tempShader = dict()
+    tempShader = {}
     # store the order in which oslinfo outputs its data
     # and separate the parameters from general shader data
-    parmlist = list()
+    parmlist = []
     if args[0] not in _shaderTypes:
-        _error("Not a valid shader type: %s" % args[0])
+        _error(f"Not a valid shader type: {args[0]}")
         return False
     else:
         tempShader['type'] = _formatVal(args[0])
@@ -219,13 +211,21 @@ def parseOslInfo(compiledShader, osl_cfg):
     while True:
         line = lines[count]
         if not line:
-            _error("No more lines to read, invalid shader %s?" % compiledShader)
+            _error(f"No more lines to read, invalid shader {compiledShader}?")
             break
 
         args = line.split()
         # find parameter name
-        if args[0] not in ["Default", "metadata:"]:  # or args[0] == "export":
-            tempparm = dict()
+        if args[0] == "Default":
+            pass
+        elif args[0] == "metadata:":
+            (key, value) = _getKeyValue(line)
+            value = _formatVal(value)
+            tempparm[key] = value
+            tempShader['hasMetaData'] = True
+
+        else:  # or args[0] == "export":
+            tempparm = {}
             if len(args) < 3:
                 tempparm['name'] = _formatVal(args[0])
                 tempparm['type'] = _formatVal(args[1])
@@ -261,14 +261,6 @@ def parseOslInfo(compiledShader, osl_cfg):
             parmlist.append(tempparm['name'])
             if 'help' in tempparm:
                 tempShader['hasParmHelp'] = True
-        # we didn't find a parameter yet, so there must be some general stuff
-        else:
-            if args[0] == "metadata:":
-                (key, value) = _getKeyValue(line)
-                value = _formatVal(value)
-                tempparm[key] = value
-                tempShader['hasMetaData'] = True
-
         if count > length:
             break
         else:
@@ -285,13 +277,14 @@ def parseShaderInfo(compiledShader, FileTypes, osl_cfg):
         shaderUI = parseOslInfo(compiledShader, osl_cfg)
 
     if not shaderUI:
-        _error("Could not process %s" % compiledShader)
+        _error(f"Could not process {compiledShader}")
         return None
     else:
-        compShader = dict()
-        compShader['name'] = shaderUI['name']
-        compShader['path'] = compiledShader
-        compShader['mtime'] = str(os.path.getmtime(compiledShader))
+        compShader = {
+            'name': shaderUI['name'],
+            'path': compiledShader,
+            'mtime': str(os.path.getmtime(compiledShader)),
+        }
         compShader['ctime'] = str(datetime.datetime.now())
         compShader['language'] = FileTypes[extension]
         # holds the output of parseOslInfo (the actual shader metadata/ui)
@@ -318,15 +311,11 @@ def cleanJsonShaders(jsonDict):
 
 def existsJsonShader(jsonFile, shaderName):
     for shader in jsonFile['shaders']:
-        if shader['name'] == shaderName:
-            return True
-        else:
-            return False
+        return shader['name'] == shaderName
 
 
 def writeJsonHeader(filename, numElements):
-    headerDict = dict()
-    headerDict['creator'] = getpass.getuser()
+    headerDict = {'creator': getpass.getuser()}
     headerDict['creation date'] = str(datetime.datetime.now())
     headerDict['name'] = os.path.basename(filename)
     headerDict['elements'] = numElements
@@ -399,15 +388,14 @@ def main():
     files = createFileList(FileTypes, osl_cfg, args.recursive, args.files, args.read_file)
 
     # parse files for shader metadata
-    shaders = dict()
+    shaders = {}
     for shaderfile in files:
         if args.verbosity:
-            print("Processing file %s" % shaderfile)
-        shaderUI = parseShaderInfo(shaderfile, FileTypes, osl_cfg)
-        if shaderUI:
+            print(f"Processing file {shaderfile}")
+        if shaderUI := parseShaderInfo(shaderfile, FileTypes, osl_cfg):
             shaders[shaderUI['path']] = shaderUI
 
-    jsonDict = dict()
+    jsonDict = {}
     # retrieve existing values in case of updating or cleaning
     if existingFile and not args.overwrite:
         with open(output, 'r') as fp:
@@ -421,19 +409,18 @@ def main():
     if args.clean:
         (changes, jsonDict['shaders']) = cleanJsonShaders(jsonDict['shaders'])
         if args.verbosity:
-            print("Removed %s shaders." % changes)
+            print(f"Removed {changes} shaders.")
     if args.update:
         changes = len(shaders)
         jsonDict['shaders'].update(shaders)
         if args.verbosity:
-            print("%s shaders updated." % changes)
+            print(f"{changes} shaders updated.")
     if args.overwrite:
         changes = len(shaders)
         jsonDict['header'] = writeJsonHeader(output, changes)
         jsonDict['shaders'] = shaders
         if args.verbosity:
-            print("%s shaders added to %s" % (changes, output))
-    # only adding new shaders
+            print(f"{changes} shaders added to {output}")
     else:
         temp_changes = changes
         if jsonDict.has_key('shaders'):
@@ -447,7 +434,7 @@ def main():
             changes = len(shaders)
         if args.verbosity:
             added_shaders = changes - temp_changes
-            print("Added %s shaders." % added_shaders)
+            print(f"Added {added_shaders} shaders.")
 
     # write to file shaders to file if changed
     if existingFile and changes:
@@ -461,7 +448,7 @@ def main():
             jsonDict['header'] = writeJsonHeader(output, len(shaders))
             json.dump(jsonDict, fp)
     elif args.verbosity:
-        print("No shaders found for adding to %s, exiting." % output)
+        print(f"No shaders found for adding to {output}, exiting.")
 
     return 0
 

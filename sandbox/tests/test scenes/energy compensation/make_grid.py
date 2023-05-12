@@ -25,31 +25,45 @@ def build_project():
 
     for i in range(0, 10):
         assembly.bsdfs().insert(
-            asr.BSDF("glossy_brdf", "glossy" + str(i), {
-                "mdf" : "ggx",
-                "reflectance" : 1.0,
-                "roughness" : i / 9.0,
-                "energy_compensation" : 0.0
-                }
+            asr.BSDF(
+                "glossy_brdf",
+                f"glossy{str(i)}",
+                {
+                    "mdf": "ggx",
+                    "reflectance": 1.0,
+                    "roughness": i / 9.0,
+                    "energy_compensation": 0.0,
+                },
             )
         )
 
         assembly.bsdfs().insert(
-            asr.BSDF("glossy_brdf", "glossy_ec" + str(i), {
-                "mdf" : "ggx",
-                "reflectance" : 1.0,
-                "roughness" : i / 9.0,
-                "energy_compensation" : 1.0
-                }
+            asr.BSDF(
+                "glossy_brdf",
+                f"glossy_ec{str(i)}",
+                {
+                    "mdf": "ggx",
+                    "reflectance": 1.0,
+                    "roughness": i / 9.0,
+                    "energy_compensation": 1.0,
+                },
             )
         )
 
     for i in range(0, 10):
         assembly.materials().insert(
-            asr.Material("generic_material", "mat" + str(i), {"bsdf": "glossy" + str(i)}))
+            asr.Material(
+                "generic_material", f"mat{str(i)}", {"bsdf": f"glossy{str(i)}"}
+            )
+        )
 
         assembly.materials().insert(
-            asr.Material("generic_material", "mat_ec" + str(i), {"bsdf": "glossy_ec" + str(i)}))
+            asr.Material(
+                "generic_material",
+                f"mat_ec{str(i)}",
+                {"bsdf": f"glossy_ec{str(i)}"},
+            )
+        )
 
     #------------------------------------------------------------------------
     # Geometry
@@ -72,8 +86,8 @@ def build_project():
     }
 
     for i in range(0, 10):
-        instance_name = object_name + "_inst" + str(i)
-        material_names = {"default": "mat" + str(i)}
+        instance_name = f"{object_name}_inst{str(i)}"
+        material_names = {"default": f"mat{str(i)}"}
 
         mat = asr.Matrix4d.make_translation(asr.Vector3d(-5.0 + i, -0.5, 0.0))
 
@@ -81,8 +95,8 @@ def build_project():
         assembly.object_instances().insert(instance)
 
     for i in range(0, 10):
-        instance_name = object_name + "_ec_inst" + str(i)
-        material_names = {"default": "mat_ec" + str(i)}
+        instance_name = f"{object_name}_ec_inst{str(i)}"
+        material_names = {"default": f"mat_ec{str(i)}"}
 
         mat = asr.Matrix4d.make_translation(asr.Vector3d(-5.0 + i, 0.5, 0.0))
 

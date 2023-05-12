@@ -151,7 +151,7 @@ def build_project():
     # Insert all the objects into the assembly.
     for object in objects:
         # Create an instance of this object and insert it into the assembly.
-        instance_name = object.get_name() + "_inst"
+        instance_name = f"{object.get_name()}_inst"
         material_name = {"material_slot_0": "01 - Default_mat"}
         mat = orientation * asr.Matrix4d.make_translation(asr.Vector3d(0.0, 0.0, 0.0))
         instance = asr.ObjectInstance(
@@ -183,7 +183,7 @@ def build_project():
             for j in grid_range:
                 for i in grid_range:
                     # Create an instance of this light and insert it into the assembly.
-                    instance_name = light.get_name() + "_inst_" + str(light_count)
+                    instance_name = f"{light.get_name()}_inst_{str(light_count)}"
                     light_count = light_count + 1
                     material_front = {"material_slot_0": "01 - Default_mat"}
                     material_back = {"material_slot_0": "light_material"}
@@ -286,7 +286,7 @@ def main():
     project = build_project()
 
     # Save the project to disk.
-    asr.ProjectFileWriter().write(project, output_scene_name + ".appleseed")
+    asr.ProjectFileWriter().write(project, f"{output_scene_name}.appleseed")
 
 if __name__ == "__main__":
     main()

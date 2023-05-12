@@ -81,7 +81,7 @@ def convert_mesh_files(tool_path, directory, recursive, input_pattern, output_fo
     for filepath in walk(directory, recursive):
         filename = os.path.basename(filepath)
         if fnmatch.fnmatch(filename, input_pattern):
-            output_filepath = os.path.splitext(filepath)[0] + "." + output_format
+            output_filepath = f"{os.path.splitext(filepath)[0]}.{output_format}"
             if overwrite or not os.path.exists(output_filepath):
                 convert_mesh_file(filepath, output_filepath, tool_path)
                 converted_file_count += 1

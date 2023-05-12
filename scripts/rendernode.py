@@ -66,10 +66,7 @@ def safe_mkdir(dir):
 
 
 def convert_path_to_local(path):
-    if os.name == "nt":
-        return path.replace('/', '\\')
-    else:
-        return path.replace('\\', '/')
+    return path.replace('/', '\\') if os.name == "nt" else path.replace('\\', '/')
 
 
 def format_message(severity, msg):
@@ -80,7 +77,7 @@ def format_message(severity, msg):
                      for line in msg.splitlines())
 
 
-VALID_USER_NAME_CHARS = frozenset("%s%s_-" % (string.ascii_letters, string.digits))
+VALID_USER_NAME_CHARS = frozenset(f"{string.ascii_letters}{string.digits}_-")
 
 
 def cleanup_user_name(user_name):
@@ -273,7 +270,7 @@ class ProcessFailedException(Exception):
 
 def render_project(args, project_filepath, log):
     # Assign the project file to ourselves.
-    assigned_project_filepath = project_filepath + "." + args.user_name
+    assigned_project_filepath = f"{project_filepath}.{args.user_name}"
     try:
         os.rename(project_filepath, assigned_project_filepath)
     except:
@@ -286,7 +283,9 @@ def render_project(args, project_filepath, log):
     try:
         # Create shell command.
         project_filename = os.path.split(project_filepath)[1]
-        output_filename = os.path.splitext(project_filename)[0] + '.' + args.output_format
+        output_filename = (
+            f'{os.path.splitext(project_filename)[0]}.{args.output_format}'
+        )
         output_filepath = os.path.join(args.directory, RENDERS_DIR, output_filename)
         command = '"{0}" -o "{1}" "{2}"'.format(args.tool_path, output_filepath, assigned_project_filepath)
         if args.args:
@@ -337,9 +336,11 @@ def get_project_files(directory):
 
     for entry in os.listdir(directory):
         filepath = os.path.join(directory, entry)
-        if os.path.isfile(filepath):
-            if os.path.splitext(filepath)[1] == '.appleseed':
-                project_files.append(filepath)
+        if (
+            os.path.isfile(filepath)
+            and os.path.splitext(filepath)[1] == '.appleseed'
+        ):
+            project_files.append(filepath)
 
     return project_files
 
@@ -375,13 +376,7 @@ def extract_project_deps(project_filepath, log):
 
 
 def gather_missing_project_deps(deps):
-    missing_deps = []
-
-    for filepath in deps:
-        if not os.path.exists(filepath):
-            missing_deps.append(filepath)
-
-    return missing_deps
+    return [filepath for filepath in deps if not os.path.exists(filepath)]
 
 
 def watch(args, log):

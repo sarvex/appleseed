@@ -96,7 +96,7 @@ def benchmark_project(project_path, appleseed_path, appleseed_args, logger):
 
     command_line = [appleseed_path, project_path] + appleseed_args
     command_line += ["--benchmark-mode"]
-    command_line += ["-o", os.path.join("renders", project_name + ".png")]
+    command_line += ["-o", os.path.join("renders", f"{project_name}.png")]
 
     output = subprocess.check_output(command_line, stderr=subprocess.STDOUT)
 
@@ -124,7 +124,7 @@ def process_output(output, logger):
 def get_value(output, key):
     pattern = r"^{0}=(.*)[\r\n]+$".format(key)
     match = re.search(pattern, output, re.MULTILINE)
-    return match.group(1) if match else None
+    return match[1] if match else None
 
 
 # -------------------------------------------------------------------------------------------------

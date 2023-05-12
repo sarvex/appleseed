@@ -101,7 +101,7 @@ def build_project():
     # Insert all the objects into the assembly.
     for object in objects:
         # Create an instance of this object and insert it into the assembly.
-        instance_name = object.get_name() + "_inst"
+        instance_name = f"{object.get_name()}_inst"
         material_name = {"material_slot_0": "01 - Default_mat"}
         mat = orientation * asr.Matrix4d.make_translation(asr.Vector3d(0.0, 0.0, 0.0))
         instance = asr.ObjectInstance(
@@ -148,11 +148,11 @@ def build_project():
     ]
 
     for key in light_colors:
-        color_name = "color_" + key
+        color_name = f"color_{key}"
         # Add colors to the project.
         assembly.colors().insert(asr.ColorEntity(color_name, {"color_space": "linear_rgb", "multiplier": 1.0}, light_colors[key]))
         idx = light_colors.keys().index(key)
-        light_name = "light_" + key
+        light_name = f"light_{key}"
         # Create the light.
         light = asr.Light("max_omni_light", light_name, {
             "decay_exponent": "0",
@@ -236,7 +236,7 @@ def main():
     project = build_project()
 
     # Save the project to disk.
-    asr.ProjectFileWriter().write(project, output_scene_name + ".appleseed")
+    asr.ProjectFileWriter().write(project, f"{output_scene_name}.appleseed")
 
 if __name__ == "__main__":
     main()

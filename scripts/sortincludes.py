@@ -79,12 +79,12 @@ def process_file(filepath):
                 lines[section_begin:index] = sorted(lines[section_begin:index], key=lambda s: s.lower())
             section_begin = -1
 
-    with open(filepath + ".processed", "wt") as f:
+    with open(f"{filepath}.processed", "wt") as f:
         for line in lines:
             f.write(line)
 
     os.remove(filepath)
-    os.rename(filepath + ".processed", filepath)
+    os.rename(f"{filepath}.processed", filepath)
 
 
 # -------------------------------------------------------------------------------------------------
@@ -105,7 +105,7 @@ def main():
     else:
         for filepath in walk(args.path, args.recursive):
             ext = os.path.splitext(filepath)[1]
-            if ext == ".h" or ext == ".cpp":
+            if ext in [".h", ".cpp"]:
                 process_file(filepath)
 
 

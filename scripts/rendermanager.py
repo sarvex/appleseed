@@ -76,10 +76,7 @@ def get_directory_size(directory):
 
 
 def get_files(directory, pattern="*"):
-    files = []
-    for file in glob.glob(os.path.join(directory, pattern)):
-        files.append(file)
-    return files
+    return list(glob.glob(os.path.join(directory, pattern)))
 
 
 def safe_mkdir(dir):
@@ -88,10 +85,7 @@ def safe_mkdir(dir):
 
 
 def convert_path_to_local(path):
-    if os.name == "nt":
-        return path.replace('/', '\\')
-    else:
-        return path.replace('\\', '/')
+    return path.replace('/', '\\') if os.name == "nt" else path.replace('\\', '/')
 
 
 def tail_file(f, window=20):
@@ -232,7 +226,7 @@ class DependencyDB:
 
     def update(self, new_roots):
         for root in new_roots:
-            if not root in self.roots:
+            if root not in self.roots:
                 success, deps = self.__extract_dependencies(root)
                 if success:
                     self.roots[root] = deps
@@ -355,14 +349,14 @@ class Manager:
                       .format(completed, total, progress, rendering, pending))
 
     def print_assignments(self):
-        assignments = {}
-        for filename in self.source_files:
-            if filename in self.inprogress_files.keys():
-                assignments[filename] = ", ".join(self.inprogress_files[filename])
-        if len(assignments) > 0:
+        if assignments := {
+            filename: ", ".join(self.inprogress_files[filename])
+            for filename in self.source_files
+            if filename in self.inprogress_files.keys()
+        }:
             self.log.info("frame assignments:")
-            for filename in assignments.keys():
-                self.log.info("  {0}: {1}".format(filename, assignments[filename]))
+            for filename, value in assignments.items():
+                self.log.info("  {0}: {1}".format(filename, value))
         else:
             self.log.info("no frame assigned.")
 
@@ -376,7 +370,7 @@ class Manager:
         filtered_pings = [x for x in unsorted_pings if x[1] is not None]
         pings = sorted(filtered_pings, key=lambda x: x[1])
         if len(pings) > 0:
-            max_owner_length = max([len(owner) for owner in owners])
+            max_owner_length = max(len(owner) for owner in owners)
             self.log.info("pings:")
             for (owner, ping) in pings:
                 padding = " " * (max_owner_length + 1 - len(owner))
@@ -387,7 +381,7 @@ class Manager:
     def read_ping(self, owner):
         TIMESTAMP_LENGTH = 26
         try:
-            with open(os.path.join(self.args.target_directory, LOGS_DIR, owner + ".log")) as file:
+            with open(os.path.join(self.args.target_directory, LOGS_DIR, f"{owner}.log")) as file:
                 last_line = tail_file(file, 1)[0]
                 return datetime.datetime.strptime(last_line[:TIMESTAMP_LENGTH], "%Y-%m-%d %H:%M:%S.%f")
         except IOError as ex:
@@ -411,8 +405,12 @@ class Manager:
         return sum(1 for filename in self.source_files if filename in self.inprogress_files)
 
     def count_pending_frames(self):
-        return sum(1 for filename in self.source_files
-                   if not filename in self.completed_files and not filename in self.inprogress_files)
+        return sum(
+            1
+            for filename in self.source_files
+            if filename not in self.completed_files
+            and filename not in self.inprogress_files
+        )
 
     def move_frames(self):
         self.log.info("moving frames...")
@@ -450,7 +448,7 @@ class Manager:
         removed = 0
         all_uploaded_files_dependencies = self.all_uploaded_dependency_db.get_all_dependencies()
         for dep in self.completed_dependency_db.get_all_dependencies():
-            if not dep in all_uploaded_files_dependencies:
+            if dep not in all_uploaded_files_dependencies:
                 count = self.remove_file(dep)
                 if count > 0:
                     self.log.info("  removed {0}".format(dep))
@@ -461,12 +459,15 @@ class Manager:
     def upload_project_files(self):
         self.log.info("uploading project files...")
         for filename in self.source_files:
-            if not filename in self.inprogress_files and not filename in self.completed_files:
-                if self.upload_file(filename) > 0:
-                    self.log.info("  uploaded {0}".format(filename))
-                    self.uploaded_files = self.gather_uploaded_files()
-                    self.update_uploaded_dependency_db()
-                    self.upload_missing_dependencies()
+            if (
+                filename not in self.inprogress_files
+                and filename not in self.completed_files
+                and self.upload_file(filename) > 0
+            ):
+                self.log.info("  uploaded {0}".format(filename))
+                self.uploaded_files = self.gather_uploaded_files()
+                self.update_uploaded_dependency_db()
+                self.upload_missing_dependencies()
 
     def upload_missing_dependencies(self):
         self.log.info("uploading missing dependencies...")

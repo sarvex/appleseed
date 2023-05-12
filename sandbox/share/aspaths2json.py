@@ -136,7 +136,7 @@ def convert(input_file, output_file):
 
     # Parse index.
     json.begin_array_prop("index")
-    for i in range(0, index_width * index_height):
+    for _ in range(0, index_width * index_height):
         first_path_offset, = struct.unpack('<Q', input_file.read(8))
         path_count, = struct.unpack('<H', input_file.read(2))
         json.begin_object()
@@ -148,7 +148,7 @@ def convert(input_file, output_file):
     # Parse name table.
     json.begin_array_prop("names")
     name_count, = struct.unpack('<H', input_file.read(2))
-    for i in range(0, name_count):
+    for _ in range(0, name_count):
         name_length, = struct.unpack('<H', input_file.read(2))
         name = input_file.read(name_length)
         json.write_string(name)
@@ -156,7 +156,7 @@ def convert(input_file, output_file):
 
     # Parse light paths.
     json.begin_array_prop("paths")
-    for i in range(0, total_path_count):
+    for _ in range(0, total_path_count):
         json.begin_object()
 
         # Parse NDC image sample coordinates.
@@ -168,7 +168,7 @@ def convert(input_file, output_file):
         # Parse light path vertices.
         json.begin_array_prop("vertices")
         vertex_count, = struct.unpack('<H', input_file.read(2))
-        for j in range(0, vertex_count):
+        for _ in range(0, vertex_count):
             json.begin_object()
 
             # Parse index in name table of the name of the object this vertex lies on.

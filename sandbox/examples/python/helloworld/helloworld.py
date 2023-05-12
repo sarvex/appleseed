@@ -88,7 +88,7 @@ def build_project():
     # Insert all the objects into the assembly.
     for object in objects:
         # Create an instance of this object and insert it into the assembly.
-        instance_name = object.get_name() + "_inst"
+        instance_name = f"{object.get_name()}_inst"
         material_names = {"default": "gray_material", "default2": "gray_material"}
         instance = asr.ObjectInstance(instance_name, {}, object.get_name(), asr.Transformd(asr.Matrix4d.identity()), material_names)
         assembly.object_instances().insert(instance)

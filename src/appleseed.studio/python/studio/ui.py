@@ -40,7 +40,7 @@ def wrapinstance(addr, type):
         return shiboken.wrapInstance(addr, type)
 
     else:
-        raise Exception("No wrapinstance function defined for " + Qt.__binding__)
+        raise Exception(f"No wrapinstance function defined for {Qt.__binding__}")
 
 
 def find_or_create_menu(menu_name):

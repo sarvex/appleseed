@@ -53,8 +53,7 @@ def safe_mkdir(dir):
 
 def walk(directory, recursive):
     if recursive:
-        for dirpath, dirnames, filenames in os.walk(directory):
-            yield dirpath, dirnames, filenames
+        yield from os.walk(directory)
     else:
         yield os.walk(directory).next()
 

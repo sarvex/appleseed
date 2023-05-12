@@ -82,8 +82,7 @@ def safe_remove(filepath):
 
 def walk(directory, recursive):
     if recursive:
-        for dirpath, dirnames, filenames in os.walk(directory):
-            yield dirpath, dirnames, filenames
+        yield from os.walk(directory)
     else:
         yield os.walk(directory).next()
 
@@ -269,7 +268,7 @@ class Logger:
         scene = remove_prefix(scene, "./")
         scene = remove_prefix(scene, ".\\")
         if len(scene) > self.SCENE_COLUMN_WIDTH:
-            scene = scene[:self.SCENE_COLUMN_WIDTH - 3] + "..."
+            scene = f"{scene[:self.SCENE_COLUMN_WIDTH - 3]}..."
         print("| {0}{1}{2} | ".format(color,
                                       scene.ljust(self.SCENE_COLUMN_WIDTH),
                                       colorama.Fore.RESET + colorama.Style.NORMAL), end='')
@@ -399,7 +398,7 @@ def render_project_file(args, project_filepath, output_filepath, log_filepath):
         command = '"{0}" -o "{1}" "{2}"'.format(args.tool_path, output_filepath, project_filepath)
 
         # Built-in additional arguments.
-        command += " " + APPLESEED_BASE_ARGS
+        command += f" {APPLESEED_BASE_ARGS}"
 
         # Additional arguments passed on runtestsuite.py's command line.
         if args.args:
@@ -477,11 +476,7 @@ def transform_to_false_color(rows):
                 row[i + 3] = 255
                 continue
 
-            if image_min != image_max:
-                fm = int(fit(m, image_min, image_max, 0, 255))
-            else:
-                fm = m
-
+            fm = int(fit(m, image_min, image_max, 0, 255)) if image_min != image_max else m
             row[i + 0] = fm
             row[i + 1] = 0
             row[i + 2] = 255 - fm
@@ -501,11 +496,11 @@ def render_test_scene(args, logger, report_writer, project_directory, project_fi
     output_directory = os.path.join(project_directory, 'renders')
     ref_directory = os.path.join(project_directory, 'ref')
 
-    output_filename = project_basename + '.png'
+    output_filename = f'{project_basename}.png'
     output_filepath = os.path.join(output_directory, output_filename)
     ref_filepath = os.path.join(ref_directory, output_filename)
 
-    log_filename = project_basename + '.txt'
+    log_filename = f'{project_basename}.txt'
     log_filepath = os.path.join(output_directory, log_filename)
 
     safe_mkdir(output_directory)
@@ -528,20 +523,19 @@ def render_test_scene(args, logger, report_writer, project_directory, project_fi
         report_writer.report_simple_failure(project_filepath, ref_filepath, output_filepath, log_filepath, "Rendering failed")
         return False
 
-    if not os.path.exists(output_filepath):
-        if not os.path.exists(ref_filepath):
-            logger.pass_rendering(rendering_time)
-            return True
-        else:
-            logger.fail_rendering(rendering_time, "No Output")
-            report_writer.report_simple_failure(project_filepath, ref_filepath, output_filepath, log_filepath, "Output image is missing")
-            return False
-    else:
+    if os.path.exists(output_filepath):
         if not os.path.exists(ref_filepath):
             logger.fail_rendering(rendering_time, "No Reference")
             report_writer.report_simple_failure(project_filepath, ref_filepath, output_filepath, log_filepath, "Reference image is missing")
             return False
 
+    elif not os.path.exists(ref_filepath):
+        logger.pass_rendering(rendering_time)
+        return True
+    else:
+        logger.fail_rendering(rendering_time, "No Output")
+        report_writer.report_simple_failure(project_filepath, ref_filepath, output_filepath, log_filepath, "Output image is missing")
+        return False
     out_width, out_height, out_rows = read_png_file(output_filepath)
     ref_width, ref_height, ref_rows = read_png_file(ref_filepath)
 
@@ -554,7 +548,7 @@ def render_test_scene(args, logger, report_writer, project_directory, project_fi
     num_diff, max_diff, diff_image = compare_images(out_rows, ref_rows, VALUE_THRESHOLD)
 
     if num_diff > MAX_DIFFERING_COMPONENTS:
-        diff_filename = project_basename + '.diff.png'
+        diff_filename = f'{project_basename}.diff.png'
         diff_filepath = os.path.join(output_directory, diff_filename)
         transform_to_false_color(diff_image)
         write_rgba_png_file(diff_filepath, diff_image)

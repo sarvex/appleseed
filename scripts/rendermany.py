@@ -58,8 +58,7 @@ def safe_mkdir(dir):
 
 def walk(directory, recursive):
     if recursive:
-        for dirpath, dirnames, filenames in os.walk(directory):
-            yield dirpath, dirnames, filenames
+        yield from os.walk(directory)
     else:
         yield os.walk(directory).next()
 
@@ -86,10 +85,12 @@ def render_project_file(args, project_directory, project_filename):
     output_directory = os.path.join(project_directory, 'renders')
     safe_mkdir(output_directory)
 
-    output_filename = os.path.splitext(project_filename)[0] + '.' + args.output_format
+    output_filename = (
+        f'{os.path.splitext(project_filename)[0]}.{args.output_format}'
+    )
     output_filepath = os.path.join(output_directory, output_filename)
 
-    log_filename = os.path.splitext(project_filename)[0] + '.txt'
+    log_filename = f'{os.path.splitext(project_filename)[0]}.txt'
     log_filepath = os.path.join(output_directory, log_filename)
 
     with open(log_filepath, "w", 0) as log_file:

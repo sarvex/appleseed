@@ -42,12 +42,7 @@ def get_version():
         'git describe --tags --always --abbrev=0',
         stdout=PIPE, shell=True)
 
-    version = pipe.stdout.read()
-
-    if version:
-        return version
-    else:
-        return 'X.Y'
+    return version if (version := pipe.stdout.read()) else 'X.Y'
 
 # Append project modules to packages location from project root
 sys.path.insert(0, os.path.abspath('../..'))
